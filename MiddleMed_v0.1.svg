@@ -1,0 +1,15 @@
+<svg id="Layer_1" data-name="Layer 1" xmlns="http://www.w3.org/2000/svg" width="18.55in" height="9.97in" viewBox="0 0 1335.34 717.91">
+  <defs>
+    <style>
+      .cls-1 {
+        fill: none;
+        stroke: #231f20;
+        stroke-miterlimit: 10;
+        stroke-width: 0.5px;
+      }
+    </style>
+  </defs>
+  <title>MiddleMed_v0.1</title>
+  <path class="cls-1" d="M699.92,271.53H550.83V85.3a12,12,0,0,0-12-12H64.12a12,12,0,0,0-12,12V778.61a12,12,0,0,0,12,12h635.8a12,12,0,0,0,12-12V283.53A12,12,0,0,0,699.92,271.53Z" transform="translate(-51.87 -72.95)"/>
+  <path class="cls-1" d="M739.16,271.42H888.25V85.2a12,12,0,0,1,12-12H1375a12,12,0,0,1,12,12V778.5a12,12,0,0,1-12,12H739.16a12,12,0,0,1-12-12V283.42A12,12,0,0,1,739.16,271.42Z" transform="translate(-51.87 -72.95)"/>
+</svg>
