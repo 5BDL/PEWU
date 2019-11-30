@@ -9,7 +9,8 @@ import adafruit_ht16k33.segments
 import adafruit_il0373
 
 ## Hardware Configuration
-FSR = analogio.AnalogIn(board.A3)
+WaterFSR = analogio.AnalogIn(board.A3)
+FoodFSR = analogio.AnalogIn(board.A2)
 NPIN = board.NEOPIXEL
 num_pixels = 1
 pixels = neopixel.NeoPixel(NPIN, num_pixels, brightness=.01 , auto_write=False)
@@ -90,25 +91,37 @@ GREEN = (0, 255, 0)
 CYAN = (0, 255, 255)
 BLUE = (0, 0, 255)
 PURPLE = (180, 0, 255)
+waterThreshold = 2.20
+foodThreshold = 2.01
 
 ## Function Definition
 def get_voltage(pin):
     return (pin.value * 3.3) / 65536
+    
+
 
 ## Main Loop
 while True:
-    FSR_value = (get_voltage(FSR))
-    print("A1 Voltage reading is", (get_voltage(FSR)))
+    Water_value = (get_voltage(WaterFSR))
+    print("A3 Voltage reading is", Water_value)
+    Food_value = (get_voltage(FoodFSR))
+    print("A2 Voltage reading is", Food_value)
+    dwater = round(Water_value, 3)
+    dfood = round(Food_value, 3)
+    display.print('Food')
     time.sleep(0.5)
-    dFSR = round(FSR_value, 3)
-    display.print(dFSR)
-    time.sleep(0.2)
+    display.print(dfood)
+    time.sleep(1.0)
+    display.print('Watr')
+    time.sleep(0.5)
+    display.print(dwater)
+    time.sleep(1.0)
 
-    if (FSR_value > 2.1):
+    if (Water_value > waterThreshold):
         print("Value is Green")
         pixels.fill(GREEN)
         pixels.show()
-    if (FSR_value < 2.09):
+    if (Water_value < 2.09):
         print("Value is RED")
         pixels.fill(BLUE)
         pixels.show()
