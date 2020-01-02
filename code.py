@@ -1,88 +1,109 @@
 # Write your code here :-)
 import time
 import analogio
+import digitalio
 import busio as io
 import board
 import displayio
 import neopixel
 import adafruit_ht16k33.segments
-import adafruit_il0373
+from adafruit_esp32spi import adafruit_esp32spi
+import adafruit_esp32spi.adafruit_esp32spi_socket as socket
+from adafruit_esp32spi import adafruit_esp32spi_wifimanager
+import adafruit_requests as requests
 
 ## Hardware Configuration
 WaterFSR = analogio.AnalogIn(board.A3)
 FoodFSR = analogio.AnalogIn(board.A2)
 NPIN = board.NEOPIXEL
 num_pixels = 1
-pixels = neopixel.NeoPixel(NPIN, num_pixels, brightness=.01 , auto_write=False)
-i2c = io.I2C(board.SCL, board.SDA)
+TESTMODE = 0
 
-# Lock the I2C device before we try to scan
-while not i2c.try_lock():
-    pass
-# Print the addresses found once
-print("I2C addresses found:", [hex(device_address)
-                               for device_address in i2c.scan()])
+#pixels = neopixel.NeoPixel(NPIN, num_pixels, brightness=.01 , auto_write=False)
 
-# Unlock I2C now that we're done scanning.
-i2c.unlock()
+# Wifi
+esp32_cs = digitalio.DigitalInOut(board.D13)
+esp32_ready = digitalio.DigitalInOut(board.D11)
+esp32_reset = digitalio.DigitalInOut(board.D12)
 
-print("i2c complete")
-display = adafruit_ht16k33.segments.Seg14x4(i2c, address=0x70)
+spi = io.SPI(board.SCK, board.MOSI, board.MISO)
+esp = adafruit_esp32spi.ESP_SPIcontrol(spi, esp32_cs, esp32_ready, esp32_reset)
+status_light = neopixel.NeoPixel(board.NEOPIXEL, 1, brightness=0.2)
 
+try:
+    from secrets import secrets
+except ImportError:
+    print("WiFi secrets are kept in secrets.py, please add them there!")
+    raise
 
-'''# Set based on your display
-FLEXIBLE = False
-TRICOLOR = True
-ROTATION = 90
+wifi = adafruit_esp32spi_wifimanager.ESPSPI_WiFiManager(esp, secrets, status_light)
 
-# Used to ensure the display is free in CircuitPython
-displayio.release_displays()
+'''# -------
+if esp.status == adafruit_esp32spi.WL_IDLE_STATUS:
+    print("ESP32 found and in idle mode")
+print("Firmware vers.", esp.firmware_version)
+print("MAC addr:", [hex(i) for i in esp.MAC_address])
 
-# Define the pins needed for display use
-# This pinout is for a Feather M4 and may be different for other boards
-# For the Metro/Shield, esc is board.D10 and dc is board.D9
-spi = board.SPI()  # Uses SCK and MOSI
-ecs = board.D9
-dc = board.D10
-rst = board.D5    # set to None for FeatherWing/Shield
-busy = board.D6   # set to None for FeatherWing/Shield
+for ap in esp.scan_networks():
+    print("\t%s\t\tRSSI: %d" % (str(ap['ssid'], 'utf-8'), ap['rssi']))
 
-if TRICOLOR:
-    highlight = 0xff0000 #third color is red (0xff0000)
-else:
-    highlight = 0x000000
+TEXT_URL = "http://wifitest.adafruit.com/testwifi/index.html"
+JSON_URL = "http://api.coindesk.com/v1/bpi/currentprice/USD.json"
+requests.set_socket(socket, esp)
 
-# Create the displayio connection to the display pins
-display_bus = displayio.FourWire(spi, command=dc, chip_select=ecs,
-                                 reset=rst, baudrate=1000000)
+if esp.status == adafruit_esp32spi.WL_IDLE_STATUS:
+    print("ESP32 found and in idle mode")
+print("Firmware vers.", esp.firmware_version)
+print("MAC addr:", [hex(i) for i in esp.MAC_address])
 
-time.sleep(1)  # Wait a bit
+for ap in esp.scan_networks():
+    print("\t%s\t\tRSSI: %d" % (str(ap['ssid'], 'utf-8'), ap['rssi']))
 
-# Create the display object
+print("Connecting to AP...")
+while not esp.is_connected:
+    try:
+        esp.connect_AP(b'Berkshire', b'Berkshire123')
+    except RuntimeError as e:
+        print("could not connect to AP, retrying: ",e)
+        continue
+print("Connected to", str(esp.ssid, 'utf-8'), "\tRSSI:", esp.rssi)
+print("My IP address is", esp.pretty_ip(esp.ip_address))
+print("IP lookup adafruit.com: %s" % esp.pretty_ip(esp.get_host_by_name("adafruit.com")))
+print("Ping google.com: %d ms" % esp.ping("google.com"))
 
-display = adafruit_il0373.IL0373(display_bus, width=212, height=104, swap_rams=FLEXIBLE, # 2.13" Tri-color
-                                 busy_pin=busy, rotation=ROTATION,
-                                 highlight_color=highlight)
+#esp._debug = True
+print("Fetching text from", TEXT_URL)
+r = requests.get(TEXT_URL)
+print('-'*40)
+print(r.text)
+print('-'*40)
+r.close()
 
-# Create a display group for our screen objects
-g = displayio.Group()
+print()
+print("Fetching json from", JSON_URL)
+r = requests.get(JSON_URL)
+print('-'*40)
+print(r.json())
+print('-'*40)
+r.close()
 
-# Display a ruler graphic from the root directory of the CIRCUITPY drive
-f = open("/5BDL-w212.bmp", "rb")
-
-pic = displayio.OnDiskBitmap(f)
-# Create a Tilegrid with the bitmap and put in the displayio group
-t = displayio.TileGrid(pic, pixel_shader=displayio.ColorConverter())
-g.append(t)
-
-# Place the display group on the screen
-display.show(g)
-
-# Refresh the display to have it actually show the image
-# NOTE: Do not refresh eInk displays sooner than 180 seconds
-display.refresh()
-print("refreshed")
+print("Done!")
 '''
+
+# TESTMODE for Threshold -----
+
+if TESTMODE == 1:
+    i2c = io.I2C(board.SCL, board.SDA)
+
+    while not i2c.try_lock():
+        pass
+    print("I2C addresses found:", [hex(device_address)
+                                for device_address in i2c.scan()])
+    i2c.unlock()
+    print("i2c complete")
+    display = adafruit_ht16k33.segments.Seg14x4(i2c, address=0x70)
+
+# END TESTMODE -----
 
 ## Software Configuration
 RED = (255, 0, 0)
@@ -93,12 +114,20 @@ BLUE = (0, 0, 255)
 PURPLE = (180, 0, 255)
 waterThreshold = 2.20
 foodThreshold = 2.01
+checkTime = 3600
 
 ## Function Definition
 def get_voltage(pin):
     return (pin.value * 3.3) / 65536
-    
 
+## NOTES
+'''
+11/30/19 - Testing
+Empty Bowl = 2.27
+Halfway Full Water = 2.625
+Quarter Full Food = 2.59
+Assume Empty Bowl @ 2.35
+'''
 
 ## Main Loop
 while True:
@@ -108,23 +137,45 @@ while True:
     print("A2 Voltage reading is", Food_value)
     dwater = round(Water_value, 3)
     dfood = round(Food_value, 3)
-    display.print('Food')
-    time.sleep(0.5)
-    display.print(dfood)
-    time.sleep(1.0)
-    display.print('Watr')
-    time.sleep(0.5)
-    display.print(dwater)
-    time.sleep(1.0)
+    s_dwater = str(dwater)
+    s_dfood = str(dfood)
 
-    if (Water_value > waterThreshold):
-        print("Value is Green")
-        pixels.fill(GREEN)
-        pixels.show()
-    if (Water_value < 2.09):
-        print("Value is RED")
-        pixels.fill(BLUE)
-        pixels.show()
+    if TESTMODE == 1:
+        display.print('Food')
         time.sleep(0.5)
-        pixels.fill(RED)
-        pixels.show()
+        display.print(dfood)
+        time.sleep(1.0)
+        display.print('Watr')
+        time.sleep(0.5)
+        display.print(dwater)
+        time.sleep(1.0)
+
+    try:
+        print("Posting data...", end='')
+        #data = ('water='+s_dwater+',food='+s_dfood)
+        data1 = dwater
+        data2 = dfood
+        feed1 = '5bdl.pewu-water'
+        feed2 = '5bdl.pewu-food'
+        payload1 = {'value':data1}
+        payload2 = {'value':data2}
+        response = wifi.post(
+            "https://io.adafruit.com/api/v2/"+secrets['aio_username']+"/feeds/"+feed1+"/data",
+            json=payload1,
+            headers={"X-AIO-KEY":secrets['aio_key']})
+        print(response.json())
+        response.close()
+        print("OK-water")
+        response = wifi.post(
+            "https://io.adafruit.com/api/v2/"+secrets['aio_username']+"/feeds/"+feed2+"/data",
+            json=payload2,
+            headers={"X-AIO-KEY":secrets['aio_key']})
+        print(response.json())
+        response.close()
+        print("OK-food")
+    except (ValueError, RuntimeError) as e:
+        print("Failed to get data, retrying\n", e)
+        wifi.reset()
+        continue
+    response = None
+    time.sleep(checkTime)
